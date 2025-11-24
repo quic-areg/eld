@@ -39,6 +39,10 @@ extern llvm::BumpPtrAllocator BAlloc;
 extern llvm::StringSaver Saver;
 void freeArena();
 
+// Allocation stats via ELD_ALLOC_STATS env
+void noteAlloc(const char *TypeName, size_t Size);
+void dumpAllocStats();
+
 // These two classes are hack to keep track of all
 // SpecificBumpPtrAllocator instances.
 struct SpecificAllocBase {
@@ -53,10 +57,19 @@ template <class T> struct SpecificAlloc : public SpecificAllocBase {
   llvm::SpecificBumpPtrAllocator<T> Alloc;
 };
 
+template <typename T> constexpr const char *getTypeTag() {
+#if defined(__clang__)
+  return __PRETTY_FUNCTION__;
+#else
+  return "unknown";
+#endif
+}
+
 // Use this arena if your object has a destructor.
 // Your destructor will be invoked from freeArena().
 template <typename T, typename... U> T *make(U &&...Args) {
   static SpecificAlloc<T> Alloc;
+  noteAlloc(getTypeTag<T>(), sizeof(T));
   return new (Alloc.Alloc.Allocate()) T(std::forward<U>(Args)...);
 }
 
