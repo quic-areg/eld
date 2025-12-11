@@ -279,13 +279,6 @@ bool GnuLdDriver::processOptions(llvm::opt::InputArgList &Args) {
     Config.addCommandLine(Table->getOptionName(T::trace_lto), true);
   }
 
-  // --trace-merge-strings
-  for (llvm::opt::Arg *Arg : Args.filtered(T::trace_merge_strings)) {
-    std::string Args = Arg->getValue();
-    std::string Trace = "merge-strings=" + Args;
-    checkAndRaiseTraceDiagEntry(Config.options().setTrace(Trace.c_str()));
-  }
-
   // --trace-section
   for (llvm::opt::Arg *arg : Args.filtered(T::trace_section)) {
     auto sectionName = std::string(arg->getValue());
@@ -608,11 +601,6 @@ bool GnuLdDriver::processOptions(llvm::opt::InputArgList &Args) {
     Config.options().setEmitGNUCompatRelocs(false);
     Config.options().setEmitRelocs(false);
   }
-
-  // --no-merge-strings
-  Config.options().setMergeStrings(!Args.hasArg(T::no_merge_strings));
-  Config.addCommandLine(Table->getOptionName(T::no_merge_strings),
-                        Args.hasArg(T::no_merge_strings));
 
   // --{no-}warn-mismatch
   if (Args.getLastArg(T::no_warn_mismatch))
@@ -1113,10 +1101,6 @@ bool GnuLdDriver::processOptions(llvm::opt::InputArgList &Args) {
     else
       Config.raise(Diag::unique_output_sections_unsupported);
   }
-
-  // --global-merge-non-alloc-strings
-  if (Args.hasArg(T::global_merge_non_alloc_strings))
-    Config.options().enableGlobalStringMerge();
 
   // --trace-linker-script
   if (Args.hasArg(T::trace_linker_script))

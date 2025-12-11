@@ -55,42 +55,6 @@ void Relocator::partialScanRelocation(Relocation &pReloc,
   }
 }
 
-void Relocator::traceMergeStrings(const ELFSection *RelocationSection,
-                                  const Relocation *R,
-                                  const MergeableString *From,
-                                  const MergeableString *To) const {
-  ELFSection *OutputSection =
-      From->Fragment->getOwningSection()->getOutputELFSection();
-  std::string OutputSectionName = From->Fragment->getOwningSection()
-                                      ->getOutputELFSection()
-                                      ->getDecoratedName(m_Config.options());
-  if (!m_Config.options().shouldTraceMergeStrSection(OutputSection))
-    return;
-  std::string SymName = R->symInfo()->name();
-  uint32_t Addend = R->addend();
-  std::string Section = RelocationSection->getDecoratedName(m_Config.options());
-  std::string File =
-      RelocationSection->getInputFile()->getInput()->decoratedPath();
-  uint32_t OldOffset = From->InputOffset;
-  std::string OldSection =
-      From->Fragment->getOwningSection()->getDecoratedName(m_Config.options());
-  std::string OldFile = From->Fragment->getOwningSection()
-                            ->getInputFile()
-                            ->getInput()
-                            ->decoratedPath();
-  uint32_t NewOffset = To->InputOffset;
-  std::string NewSection =
-      To->Fragment->getOwningSection()->getDecoratedName(m_Config.options());
-  std::string NewFile = To->Fragment->getOwningSection()
-                            ->getInputFile()
-                            ->getInput()
-                            ->decoratedPath();
-
-  m_Config.raise(Diag::modifying_mergestr_reloc)
-      << SymName << Addend << Section << File << OldOffset << OldSection
-      << OldFile << NewOffset << NewSection << NewFile;
-}
-
 std::pair<Fragment *, uint64_t>
 Relocator::findFragmentForMergeStr(const ELFSection *RelocationSection,
                                    const Relocation *R,
@@ -103,14 +67,7 @@ Relocator::findFragmentForMergeStr(const ELFSection *RelocationSection,
     return {nullptr, 0};
 
   OutputSectionEntry *OutputSection = F->getOwningSection()->getOutputSection();
-  bool GlobalMerge = m_Config.options().shouldGlobalStringMerge();
-  if (MergeableString *DeDuped =
-          (!F->getOwningSection()->isAlloc() && GlobalMerge)
-              ? m_Module.getMergedNonAllocString(String)
-              : OutputSection->getMergedString(String)) {
-    if (m_Config.getPrinter()->isVerbose() ||
-        m_Config.getPrinter()->traceMergeStrings())
-      traceMergeStrings(RelocationSection, R, String, DeDuped);
+  if (MergeableString *DeDuped = OutputSection->getMergedString(String)) {
     String = DeDuped;
   }
 

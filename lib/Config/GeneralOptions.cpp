@@ -163,22 +163,6 @@ bool GeneralOptions::setRequestedTimingRegions(const char *TimingRegion) {
   return false;
 }
 
-bool GeneralOptions::shouldTraceMergeStrSection(const ELFSection *S) const {
-  switch (MergeStrTraceValue) {
-  case NONE:
-    return false;
-  case ALL:
-    return true;
-  case ALLOC:
-    return S->isAlloc();
-  case SECTIONS:
-    for (auto &Regex : MergeStrSectionsToTrace)
-      if (Regex.match(S->name()))
-        return true;
-    return false;
-  }
-}
-
 eld::Expected<void> GeneralOptions::setTrace(const char *PTraceType) {
   std::optional<uint32_t> TraceMe = DiagEngine->getPrinter()->trace();
   StringRef TraceType = PTraceType;
@@ -203,19 +187,6 @@ eld::Expected<void> GeneralOptions::setTrace(const char *PTraceType) {
     std::string Sym = TraceType.substr(Pos + 1).str();
     SectionTrace.emplace_back(llvm::Regex(Sym));
     SectionsToTrace.emplace_back(Sym);
-  } else if (TraceType.starts_with("merge-strings")) {
-    size_t Pos = TraceType.find_last_of('=');
-    std::string Arg = TraceType.substr(Pos + 1).str();
-    GeneralOptions::MergeStrTraceType Type =
-        llvm::StringSwitch<GeneralOptions::MergeStrTraceType>(Arg)
-            .Case("all", GeneralOptions::MergeStrTraceType::ALL)
-            .Case("allocatable_sections",
-                  GeneralOptions::MergeStrTraceType::ALLOC)
-            .Default(GeneralOptions::MergeStrTraceType::SECTIONS);
-    MergeStrTraceValue = Type;
-    if (Type == SECTIONS)
-      addMergeStrTraceSection(Arg);
-    TraceMe = DiagEngine->getPrinter()->TraceMergeStrings;
   } else {
     TraceMe =
         llvm::StringSwitch<std::optional<uint32_t>>(TraceType)
@@ -226,7 +197,6 @@ eld::Expected<void> GeneralOptions::setTrace(const char *PTraceType) {
             .Case("garbage-collection", DiagEngine->getPrinter()->TraceGC)
             .Case("live-edges", DiagEngine->getPrinter()->TraceGCLive)
             .Case("lto", DiagEngine->getPrinter()->TraceLTO)
-            .Case("merge-strings", DiagEngine->getPrinter()->TraceMergeStrings)
             .Case("plugin", DiagEngine->getPrinter()->TracePlugin)
             .Case("threads", DiagEngine->getPrinter()->TraceThreads)
             .Case("trampolines", DiagEngine->getPrinter()->TraceTrampolines)

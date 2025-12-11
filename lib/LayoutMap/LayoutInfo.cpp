@@ -171,13 +171,11 @@ LayoutInfo::setLayoutDetail(llvm::StringRef Option,
   const llvm::StringLiteral ShowRelativePathOptionStr = "relative-path";
   uint32_t OptionLayoutDetail =
       llvm::StringSwitch<uint32_t>(Option)
-          .Case("show-strings", ShowStrings)
           .Case("absolute-path", ShowAbsolutePath)
           .Case("no-timing", NoTimeStats)
           .Case("only-layout", OnlyLayout)
           .Case("show-header-details", ShowHeaderDetails)
           .Case("show-timing", ShowTiming)
-          .Case("show-debug-strings", ShowDebugStrings)
           .Case("show-initial-layout", ShowInitialLayout)
           .Case("show-symbol-resolution", ShowSymbolResolution)
           .StartsWith(ShowRelativePathOptionStr, ShowRelativePath)
@@ -471,36 +469,6 @@ void LayoutInfo::recordUpdateLinkStats(plugin::LinkerWrapper *W,
                                        UpdateLinkStatsPluginOp *O) {
   PluginOps[W].push_back(O);
   Plugins.insert(W);
-}
-
-void LayoutInfo::buildMergedStringMap(Module &M) {
-  if (!MergedStrings.empty())
-    return;
-  std::vector<OutputSectionEntry *> OutputSections;
-  for (ELFSection *S : M) {
-    if (S->isRelocationSection())
-      continue;
-    if (auto *O = S->getOutputSection())
-      OutputSections.push_back(O);
-  }
-  for (OutputSectionEntry *O : M.getScript().sectionMap()) {
-    OutputSections.push_back(O);
-  }
-  bool GlobalMerge = M.getConfig().options().shouldGlobalStringMerge();
-  auto AddString = [&](OutputSectionEntry *O, MergeableString *S) {
-    if (!S->Exclude)
-      return;
-    MergeableString *Merged =
-        (GlobalMerge && !S->isAlloc() ? M.getMergedNonAllocString(S)
-                                      : O->getMergedString(S));
-    ASSERT(Merged, "expected to find a merged string");
-    addMergedStrings(Merged, S);
-  };
-  for (OutputSectionEntry *O : OutputSections)
-    for (MergeableString *S : O->getMergeStrings())
-      AddString(O, S);
-  for (MergeableString *S : M.getNonAllocStrings())
-    AddString(nullptr, S);
 }
 
 void LayoutInfo::printStats(void *Handle, llvm::raw_ostream &OS) const {

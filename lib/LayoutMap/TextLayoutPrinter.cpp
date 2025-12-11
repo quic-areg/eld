@@ -623,26 +623,6 @@ void TextLayoutPrinter::printPadding(ELFSection *Section, int64_t StartOffset,
     outputStream().resetColor();
 }
 
-void TextLayoutPrinter::printMergeString(MergeableString *S, Module &M) const {
-  if (S->Exclude) {
-    outputStream() << "\n";
-    return;
-  }
-  if (ThisLayoutInfo->showStrings()) {
-    outputStream() << "[ Contents: " << S->String.data() << "]";
-    outputStream() << "\n";
-  }
-  for (MergeableString *Merged : ThisLayoutInfo->getMergedStrings(S)) {
-    assert(Merged->Exclude);
-    outputStream() << "\t# ";
-    ELFSection *S = Merged->Fragment->getOwningSection();
-    outputStream() << S->getDecoratedName(M.getConfig().options()) << "\t0x";
-    outputStream().write_hex(Merged->InputOffset);
-    outputStream() << "\t" << getDecoratedPath(S->getInputFile()->getInput());
-    outputStream() << "\n";
-  }
-}
-
 void TextLayoutPrinter::printFragInfo(Fragment *Frag, LayoutFragmentInfo *Info,
                                       ELFSection *Section, Module &M) const {
 
@@ -694,29 +674,12 @@ void TextLayoutPrinter::printFragInfo(Fragment *Frag, LayoutFragmentInfo *Info,
   std::optional<uint64_t> AddressOrOffset;
   bool HasFragInfo =
       (M.isLinkStateCreatingSegments() || M.isLinkStateAfterLayout());
-  if (llvm::isa<MergeStringFragment>(Frag) && !M.isLinkStateBeforeLayout()) {
-    auto *Strings = llvm::cast<MergeStringFragment>(Frag);
-    for (MergeableString *S : Strings->getStrings()) {
-      if (S->Exclude)
-        continue;
-      if (!GC && HasFragInfo)
-        AddressOrOffset =
-            S->OutputOffset +
-            (Section->isAlloc() ? Section->addr() : Section->offset());
-      PrintOneFragOrString(S->size(), AddressOrOffset);
-      /// if showStrings there is still extra content to be printed on this line
-      if (!ThisLayoutInfo->showStrings())
-        outputStream() << "\n";
-      printMergeString(S, M);
-    }
-  } else {
-    if (!GC && HasFragInfo)
-      AddressOrOffset =
-          Frag->getOffset() +
-          (Section->isAlloc() ? Section->addr() : Section->offset());
-    PrintOneFragOrString(Frag->size(), AddressOrOffset);
-    outputStream() << "\n";
-  }
+  if (!GC && HasFragInfo)
+    AddressOrOffset =
+        Frag->getOffset() +
+        (Section->isAlloc() ? Section->addr() : Section->offset());
+  PrintOneFragOrString(Frag->size(), AddressOrOffset);
+  outputStream() << "\n";
 }
 
 void TextLayoutPrinter::printChangeOutputSectionInfo(
@@ -1202,7 +1165,6 @@ void TextLayoutPrinter::printScriptCommands(const LinkerScript &Script) {
 // etc. If use of color for text is enabled, print text with a foreground
 // color. Reset the colors to terminal defaults after writing.
 void TextLayoutPrinter::printMapFile(eld::Module &Module) {
-  ThisLayoutInfo->buildMergedStringMap(Module);
   GNULDBackend &Backend = Module.getBackend();
   bool UseColor = Backend.config().options().color() &&
                   Backend.config().options().colorMap();

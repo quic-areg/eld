@@ -142,8 +142,6 @@ private:
   void printMemoryRegions(GNULDBackend const &Backend,
                           const OutputSectionEntry *OS);
 
-  void printMergeString(MergeableString *S, Module &M) const;
-
   void printIsFileHeaderLoadedInfo(bool IsLoaded, bool UseColor);
 
   void printIsPHDRSLoadedInfo(bool IsLoaded, bool UseColor);

@@ -589,27 +589,6 @@ public:
                                            uint32_t Align,
                                            InputFile *OriginatingInputFile);
 
-  MergeableString *getMergedNonAllocString(const MergeableString *S) const {
-    ASSERT(!S->isAlloc(), "string is alloc!");
-    auto Str = UniqueNonAllocStrings.find(S->String);
-    if (Str == UniqueNonAllocStrings.end())
-      return nullptr;
-    MergeableString *MergedString = Str->second;
-    if (MergedString == S)
-      return nullptr;
-    return MergedString;
-  }
-
-  llvm::SmallVectorImpl<MergeableString *> &getNonAllocStrings() {
-    return AllNonAllocStrings;
-  }
-
-  void addNonAllocString(MergeableString *S) {
-    ASSERT(!S->isAlloc(), "string is alloc!");
-    AllNonAllocStrings.push_back(S);
-    UniqueNonAllocStrings.insert({S->String, S});
-  }
-
   void addScriptSymbolForDynamicListFile(InputFile *DynamicListFile,
                                          ScriptSymbol *Sym) {
     DynamicListFileToScriptSymbolsMap[DynamicListFile].push_back(Sym);
@@ -734,9 +713,6 @@ private:
   std::mutex Mutex;
   // ----------------- Central thread pool for Linker ---------------
   llvm::ThreadPoolInterface *LinkerThreadPool = nullptr;
-
-  llvm::StringMap<MergeableString *> UniqueNonAllocStrings;
-  llvm::SmallVector<MergeableString *> AllNonAllocStrings;
   llvm::DenseMap<InputFile *, ScriptSymbolList>
       DynamicListFileToScriptSymbolsMap;
   llvm::StringSet<> OutputSectDescNameSet;

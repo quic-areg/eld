@@ -92,9 +92,6 @@ private:
 
   bool shouldCreateNewSection(ELFSection *, ELFSection *) const;
 
-  void traceMergeStrings(const MergeableString *From,
-                         const MergeableString *To) const;
-
   /// Assigns output sections to internal common sections.
   bool assignOutputSectionsToCommonSymbols();
 

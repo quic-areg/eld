@@ -151,39 +151,6 @@ ELFSection *ObjectBuilder::mergeSection(GNULDBackend &PGnuldBackend,
   return nullptr;
 }
 
-void ObjectBuilder::traceMergeStrings(const MergeableString *From,
-                                      const MergeableString *To) const {
-  ELFSection *OutputSection =
-      From->Fragment->getOwningSection()->getOutputELFSection();
-  std::string OutputSectionName =
-      OutputSection->getDecoratedName(ThisConfig.options());
-  if (!ThisConfig.options().shouldTraceMergeStrSection(OutputSection) &&
-      ThisConfig.options().getMergeStrTraceType() != GeneralOptions::ALLOC)
-    return;
-  /// The output section's alloc flag has not been set yet, so we will have to
-  /// use the input section's flag here
-  if (ThisConfig.options().getMergeStrTraceType() == GeneralOptions::ALLOC &&
-      !From->Fragment->getOwningSection()->isAlloc())
-    return;
-  std::string FileFrom = From->Fragment->getOwningSection()
-                             ->getInputFile()
-                             ->getInput()
-                             ->decoratedPath(true);
-  std::string FileTo = To->Fragment->getOwningSection()
-                           ->getInputFile()
-                           ->getInput()
-                           ->decoratedPath(true);
-  std::string SectionFrom =
-      From->Fragment->getOwningSection()->getDecoratedName(
-          ThisConfig.options());
-  std::string SectionTo = From->Fragment->getOwningSection()->getDecoratedName(
-      ThisConfig.options());
-  ThisConfig.raise(Diag::merging_fragments)
-      << FileFrom << SectionFrom << FileTo << SectionTo << From->String
-      << OutputSectionName;
-  assert(From->String == To->String);
-}
-
 void ObjectBuilder::mergeStrings(MergeStringFragment *F,
                                  OutputSectionEntry *O) {
   for (MergeableString *S : F->getStrings()) {
@@ -191,9 +158,6 @@ void ObjectBuilder::mergeStrings(MergeStringFragment *F,
         MergeStringFragment::mergeStrings(S, O, module());
     if (!MergedString)
       continue;
-    if (config().getPrinter()->traceMergeStrings() ||
-        config().getPrinter()->isVerbose())
-      traceMergeStrings(S, MergedString);
   }
 }
 

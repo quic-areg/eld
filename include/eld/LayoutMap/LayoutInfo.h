@@ -74,13 +74,11 @@ class LayoutInfo {
 
 public:
   enum LayoutDetail {
-    ShowStrings = 0x1,
     ShowAbsolutePath = 0x2,
     OnlyLayout = 0x4,
     NoTimeStats = 0x8,
     ShowHeaderDetails = 0x10,
     ShowTiming = 0x20,
-    ShowDebugStrings = 0x40,
     ShowRelativePath = 0x80,
     ShowInitialLayout = 0x100,
     ShowSymbolResolution = 0x200
@@ -184,8 +182,6 @@ public:
 
   LayoutInfo(LinkerConfig &PConfig);
 
-  bool showStrings() const { return LayoutDetail & ShowStrings; }
-
   bool showOnlyLayout() const { return LayoutDetail & OnlyLayout; }
 
   bool showAbsolutePath() const { return LayoutDetail & ShowAbsolutePath; }
@@ -193,8 +189,6 @@ public:
   bool showRelativePath() const { return LayoutDetail & ShowRelativePath; }
 
   bool dontShowTiming() const { return LayoutDetail & NoTimeStats; }
-
-  bool showDebugStrings() const { return LayoutDetail & ShowDebugStrings; }
 
   bool showTimers() const {
     return !dontShowTiming() && (LayoutDetail & ShowTiming);
@@ -397,23 +391,6 @@ public:
 
   std::vector<std::string> &getComments() { return Comments; }
 
-  void buildMergedStringMap(Module &M);
-
-  void addMergedStrings(MergeableString *From, MergeableString *To) {
-    assert(From != To);
-    if (To->Fragment->getOutputELFSection()->name().starts_with(".debug_str") &&
-        !showDebugStrings())
-      return;
-    MergedStrings[From].push_back(To);
-  }
-
-  std::vector<MergeableString *> getMergedStrings(MergeableString *S) const {
-    auto Fragments = MergedStrings.find(S);
-    if (Fragments == MergedStrings.end())
-      return {};
-    return MergedStrings.at(S);
-  }
-
   static std::optional<std::string> getBasepath() { return ThisBasepath; }
 
   // -------------------------- Stats ---------------------------------
@@ -450,8 +427,6 @@ private:
   ScriptVectorT LinkerScripts;
   std::vector<std::string> VersionScripts;
   std::vector<std::string> Comments;
-  std::unordered_map<MergeableString *, std::vector<MergeableString *>>
-      MergedStrings;
   LinkerConfig &ThisConfig;
   /// It is required to compute relative path when -MapDetail
   /// 'show-relative-path=...' is used.

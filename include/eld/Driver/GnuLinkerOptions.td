@@ -270,10 +270,6 @@ def unique_output_sections
     : Flag<["-", "--"], "unique-output-sections">,
       HelpText<"Place each input section in a unique output section">,
       Group<grp_scriptopts>;
-def global_merge_non_alloc_strings
-    : Flag<["--"], "global-merge-non-alloc-strings">,
-      HelpText<"merge non-alloc strings across output sections">,
-      Group<grp_scriptopts>;
 def disable_overlap_checks
     : Flag<["--"], "no-check-sections">,
       HelpText<"Do not check section addresses for overlaps">,
@@ -684,7 +680,6 @@ defm trace
           "\t\t\t --trace=command-line : trace header info\n"
           "\t\t\t --trace=live-edges : trace reachable sections when garbage "
           "collection is enabled\n"
-          "\t\t\t --trace=merge-strings : trace linker string optimization\n"
           "\t\t\t --trace=trampolines : trace trampolines\n"
           "\t\t\t --trace=wrap-symbols : trace symbol wrap options\n"
           "\t\t\t --trace=symdef : trace symbol resolution from symdef files\n"
@@ -710,12 +705,6 @@ defm trace_reloc : smDashWithOpt<"trace-reloc", "trace_reloc",
                                  "trace a particular relocation">,
                    MetaVarName<"<relocation>">,
                    Group<grp_diagopts>;
-defm trace_merge_strings
-    : smDashWithOpt<"trace-merge-strings", "trace_merge_strings",
-          "Emit diagnostics describing how strings were merged. Options: "
-          "all(default), allocatable_sections, <output section (regex)>">,
-      MetaVarName<"<option>">,
-      Group<grp_diagopts>;
 defm verify_options : smDashWithOpt<"verify-options", "verify_options",
                                     "Verify certain internal linker "
                                     "computations - currently supports reloc">,
@@ -852,9 +841,6 @@ def eh_frame_hdr
     : Flag<["--"], "eh-frame-hdr">,
       HelpText<"Create EH Frame Header section for faster exception handling">,
       Group<grp_optimizationopts>;
-def no_merge_strings : Flag<["--"], "no-merge-strings">,
-                       HelpText<"Disable String Merging">,
-                       Group<grp_optimizationopts>;
 def no_trampolines : Flag<["--"], "no-trampolines">,
                      HelpText<"Disable Trampolines">,
                      Group<grp_optimizationopts>;

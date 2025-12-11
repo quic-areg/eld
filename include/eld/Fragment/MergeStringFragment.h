@@ -83,6 +83,7 @@ public:
 private:
   /// After this fragment has been given an output offset this function will be
   /// called and set the output offset of every string owned by this fragment
+  /// TODO: we can do this in parallel
   void assignOutputOffsets();
 };
 

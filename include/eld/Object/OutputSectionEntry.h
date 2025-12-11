@@ -187,10 +187,7 @@ public:
     return MergedString;
   }
 
-  void addString(MergeableString *S) {
-    AllStrings.push_back(S);
-    UniqueStrings.insert({S->String, S});
-  }
+  void addString(MergeableString *S) { UniqueStrings.insert({S->String, S}); }
 
   uint64_t getTrampolineCount(const std::string &TrampolineName);
 
@@ -199,10 +196,6 @@ public:
   // Update epilog in OutputSectionEntry to point epilog entries to
   // entries created in the linker
   eld::Expected<void> updateEpilog(Module &M);
-
-  const llvm::SmallVectorImpl<MergeableString *> &getMergeStrings() const {
-    return AllStrings;
-  }
 
 private:
   std::string Name;
@@ -219,7 +212,6 @@ private:
   std::unordered_map<ResolveInfo *, std::vector<BranchIsland *>>
       BranchIslandForSymbol;
   llvm::StringMap<MergeableString *> UniqueStrings;
-  llvm::SmallVector<MergeableString *, 0> AllStrings;
   uint64_t Hash = 0;
   llvm::StringMap<uint64_t> TrampolineNameToCountMap;
   uint64_t PAddr = 0;

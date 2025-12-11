@@ -39,7 +39,7 @@ bar:
 
 // START_TEST
 // RUN: %clang %clangopts -c %s -o %t.o
-// RUN: %link %linkopts --emit-relocs %t.o --trace=merge-strings=all -T %p/Inputs/addend.t -o %t.out
+// RUN: %link %linkopts --emit-relocs %t.o -T %p/Inputs/addend.t -o %t.out
 // RUN: %readelf -s %t.out | %filecheck %s --check-prefix=SYM
 // RUN: %objdump -D %t.out | %filecheck %s --check-prefix=DUMP
 // END_TEST

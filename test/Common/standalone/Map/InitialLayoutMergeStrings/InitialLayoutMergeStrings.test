@@ -18,4 +18,3 @@ CHECK-NOT: .debug_str 0x
 CHECK: *(.debug_str)
 CHECK: Output Section and Layout
 CHECK: .debug_str
-CHECK-COUNT-7: .debug_str 0x

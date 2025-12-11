@@ -93,7 +93,6 @@ Where [*option...*] is one or more of the following:
 	-MapDetail <value>
 	-MapStyle <value>
 	-march=version	|	-mcpu=version
-	-merge-strings | --no-merge-strings
 	-mllvm=options
 	-mtriple=(hexagon-unknown-elf|hexagon-unknown-linux)
 	-mv5	|	-mv55

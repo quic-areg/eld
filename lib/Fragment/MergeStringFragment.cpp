@@ -19,11 +19,8 @@ MergeStringFragment::MergeStringFragment(ELFSection *O)
 MergeableString *MergeStringFragment::mergeStrings(MergeableString *S,
                                                    OutputSectionEntry *O,
                                                    Module &Module) {
-  bool GlobalMerge =
-      Module.getConfig().options().shouldGlobalStringMerge() && !S->isAlloc();
-  MergeableString *MergedString =
-      GlobalMerge ? Module.getMergedNonAllocString(S) : O->getMergedString(S);
-  GlobalMerge ? Module.addNonAllocString(S) : O->addString(S);
+  MergeableString *MergedString = O->getMergedString(S);
+  O->addString(S);
   if (!MergedString)
     return nullptr;
   S->exclude();

@@ -590,11 +590,6 @@ public:
   bool isInExcludeLIBS(llvm::StringRef ResolvedPath,
                        llvm::StringRef NameSpecPath) const;
 
-  // -- findPos --
-  void setMergeStrings(bool MergeStrings) { BMergeStrings = MergeStrings; }
-
-  bool mergeStrings() const { return BMergeStrings; }
-
   void setEmitRelocs(bool EmitRelocs) {
     BEmitRelocs = EmitRelocs;
     ;
@@ -988,26 +983,11 @@ public:
   // Returns true if internal errors should be considered fatal.
   bool isFatalInternalErrors() const { return FatalInternalErrors; }
 
-  // ----------------- --trace-merge-strings options --------------------------
-  enum MergeStrTraceType { NONE, ALL, ALLOC, SECTIONS };
-
-  MergeStrTraceType getMergeStrTraceType() const { return MergeStrTraceValue; }
-
-  void addMergeStrTraceSection(const std::string Section) {
-    MergeStrSectionsToTrace.push_back(llvm::Regex(Section));
-  }
-
-  bool shouldTraceMergeStrSection(const ELFSection *S) const;
-
   // --trace-linker-script
   bool shouldTraceLinkerScript() const;
 
   // The return value indicates m_MapStyle modification
   bool checkAndUpdateMapStyleForPrintMap();
-
-  void enableGlobalStringMerge() { GlobalMergeNonAllocStrings = true; }
-
-  bool shouldGlobalStringMerge() const { return GlobalMergeNonAllocStrings; }
 
   // --keep-labels
   void setKeepLabels() { BKeepLabels = true; }
@@ -1192,7 +1172,6 @@ private:
   bool NoInhibitExec = false;        //--noinhibit-exec
   bool NoGnuStack = false;           //--nognustack
   bool BNoTrampolines = false;       //--no-trampolines
-  bool BMergeStrings = true;         //--merge-strings
   bool BEmitRelocs = false;          //--emit-relocs
   bool BEmitGNUCompatRelocs = false; // --emit-gnu-compat-relocs
   bool BCref = false;                // --cref
@@ -1277,8 +1256,6 @@ private:
   std::vector<std::string> SymbolsToTrace;
   std::vector<std::string> SectionsToTrace;
   std::vector<std::string> RelocsToTrace;
-  std::vector<llvm::Regex> MergeStrSectionsToTrace;
-  MergeStrTraceType MergeStrTraceValue = MergeStrTraceType::NONE;
   std::set<std::string> RelocVerify;
   std::set<std::string> ExcludeLTOFiles;
   std::set<std::string> IncludeLTOFiles;
@@ -1325,7 +1302,6 @@ private:
   bool EmitUniqueOutputSections = false; // --unique-output-sections
   bool BRelaxation = false;              // --relaxation
   llvm::SmallVector<std::string, 8> MapStyles;
-  bool GlobalMergeNonAllocStrings = false; // --global-merge-non-alloc-strings
   bool BKeepLabels = false;                // --keep-labels (RISC-V)
   bool BEnableOverlapChecks = true; // --check-sections/--no-check-sections
   bool ThinArchiveRuleMatchingCompat = false;

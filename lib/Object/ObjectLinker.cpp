@@ -561,23 +561,6 @@ bool ObjectLinker::readRelocations() {
   return true;
 }
 
-void ObjectLinker::mergeNonAllocStrings(
-    std::vector<OutputSectionEntry *> OutputSections,
-    ObjectBuilder &Builder) const {
-  for (OutputSectionEntry *O : OutputSections) {
-    for (auto *RC : O->getRuleContainer()) {
-      for (Fragment *F : RC->getSection()->getFragmentList()) {
-        if (F->getOwningSection()->isAlloc())
-          continue;
-        auto *Strings = llvm::dyn_cast<MergeStringFragment>(F);
-        if (!Strings)
-          continue;
-        Builder.mergeStrings(Strings, O);
-      }
-    }
-  }
-}
-
 void ObjectLinker::mergeIdenticalStrings() const {
   /// FIXME: Why do we not have ObjectBuilder as a member variable?
   ObjectBuilder Builder(ThisConfig, *ThisModule);
@@ -586,16 +569,11 @@ void ObjectLinker::mergeIdenticalStrings() const {
   /// strings would need to be placed in one Module, so threads should
   /// not be used.
   bool UseThreads = ThisConfig.options().numThreads() > 1;
-  bool GlobalMerge = ThisConfig.options().shouldGlobalStringMerge();
   llvm::ThreadPoolInterface *Pool = ThisModule->getThreadPool();
   auto MergeStrings = [&](OutputSectionEntry *O) {
     for (RuleContainer *RC : *O) {
       for (Fragment *F : RC->getSection()->getFragmentList()) {
         if (!F->isMergeStr())
-          continue;
-        // if global merge is enabled then non-alloc strings have already been
-        // merged
-        if (GlobalMerge && !F->getOwningSection()->isAlloc())
           continue;
         Builder.mergeStrings(llvm::cast<MergeStringFragment>(F),
                              F->getOutputELFSection()->getOutputSection());
@@ -624,11 +602,6 @@ void ObjectLinker::mergeIdenticalStrings() const {
     OutputSections.push_back(O);
   }
 
-  /// if GlobalMerge is enabled, merge non-alloc strings first without threads
-  /// then use threads for the rest.
-  if (GlobalMerge)
-    mergeNonAllocStrings(OutputSections, Builder);
-
   for (OutputSectionEntry *O : OutputSections) {
     if (UseThreads)
       Pool->async(std::bind(MergeStrings, O));
@@ -646,14 +619,8 @@ void ObjectLinker::fixMergeStringRelocations() const {
     ELFObjectFile *Obj = llvm::dyn_cast<ELFObjectFile>(I);
     if (!Obj)
       continue;
-    for (ELFSection *S : Obj->getRelocationSections()) {
-      if (ThisModule->getPrinter()->isVerbose() ||
-          ThisModule->getPrinter()->traceMergeStrings())
-        ThisConfig.raise(Diag::handling_merge_strings_for_section)
-            << S->getDecoratedName(ThisConfig.options())
-            << S->getInputFile()->getInput()->decoratedPath(true);
+    for (ELFSection *S : Obj->getRelocationSections())
       getTargetBackend().getRelocator()->doMergeStrings(S);
-    }
   }
 }
 

@@ -99,11 +99,6 @@ public:
 
   virtual uint32_t getAddend(const Relocation *R) const { return R->addend(); }
 
-  virtual void traceMergeStrings(const ELFSection *RelocationSection,
-                                 const Relocation *R,
-                                 const MergeableString *From,
-                                 const MergeableString *To) const;
-
   virtual std::pair<Fragment *, uint64_t>
   findFragmentForMergeStr(const ELFSection *RelocationSection,
                           const Relocation *R, MergeStringFragment *F) const;

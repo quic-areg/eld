@@ -44,7 +44,6 @@ public:
     TraceWrap = 0x1000,
     TraceSection = 0x2000,
     TraceDynamicLinking = 0x4000,
-    TraceMergeStrings = 0x8000,
     TraceLinkerScript = 0x10000,
     TraceSymDef = 0x100000,
 #ifdef ELD_ENABLE_SYMBOL_VERSIONING
@@ -94,8 +93,6 @@ public:
   bool traceWrapSymbols() { return Trace & TraceWrap; }
 
   bool traceSection() { return Trace & TraceSection; }
-
-  bool traceMergeStrings() { return Trace & TraceMergeStrings; }
 
   bool traceLinkerScript() { return (Trace & TraceLinkerScript); }
 
