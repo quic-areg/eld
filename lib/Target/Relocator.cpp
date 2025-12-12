@@ -87,6 +87,10 @@ bool Relocator::doMergeStrings(ELFSection *S) {
     auto [Frag, Offset] = findFragmentForMergeStr(S, R, MSF);
     if (!Frag)
       return;
+    // We only have to mess with addends and make new FragmentRefs for strings
+    // that we moved (merged strings).
+    if (OldTarget->frag() == Frag && OldTarget->offset() == Offset)
+      return;
     adjustAddend(R);
     /// Replace the target to point to the string directly.
     R->modifyRelocationFragmentRef(make<FragmentRef>(*Frag, Offset));
