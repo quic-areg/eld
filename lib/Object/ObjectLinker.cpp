@@ -565,9 +565,7 @@ void ObjectLinker::mergeIdenticalStrings() const {
   /// FIXME: Why do we not have ObjectBuilder as a member variable?
   ObjectBuilder Builder(ThisConfig, *ThisModule);
   /// We can multithread across output sections as there is no shared state
-  /// between them wrt string merging. When global string merging is enabled,
-  /// strings would need to be placed in one Module, so threads should
-  /// not be used.
+  /// between them wrt string merging.
   bool UseThreads = ThisConfig.options().numThreads() > 1;
   llvm::ThreadPoolInterface *Pool = ThisModule->getThreadPool();
   auto MergeStrings = [&](OutputSectionEntry *O) {
@@ -575,6 +573,9 @@ void ObjectLinker::mergeIdenticalStrings() const {
       for (Fragment *F : RC->getSection()->getFragmentList()) {
         if (!F->isMergeStr())
           continue;
+        // llvm::outs() << "here\n";
+        // llvm::outs().flush();
+
         Builder.mergeStrings(llvm::cast<MergeStringFragment>(F),
                              F->getOutputELFSection()->getOutputSection());
       }
@@ -608,8 +609,14 @@ void ObjectLinker::mergeIdenticalStrings() const {
     else
       MergeStrings(O);
   }
+
   if (UseThreads)
     Pool->wait();
+
+  for (auto &O : OutputSections) {
+    if (O->hasOutputStringTable())
+      O->getOutputStringTable()->finalize();
+  }
 }
 
 void ObjectLinker::fixMergeStringRelocations() const {
@@ -1265,7 +1272,7 @@ void ObjectLinker::assignOffset(OutputSectionEntry *Out) {
   for (auto &C : *Out) {
     C->getSection()->setOffset(O);
     for (auto &F : C->getSection()->getFragmentList()) {
-      if (!F->isNull()) {
+      if (!F->isNull() && !F->isMergeStr()) {
         F->setOffset(O);
         O = (F->getOffset(ThisConfig.getDiagEngine()) + F->size());
       }

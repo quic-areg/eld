@@ -30,10 +30,12 @@ struct MergeableString {
   llvm::StringRef String;
   uint32_t InputOffset;
   uint32_t OutputOffset;
+  uint32_t Hash;
   bool Exclude;
   MergeableString(MergeStringFragment *F, llvm::StringRef S, uint32_t I,
-                  uint32_t O, bool E)
-      : Fragment(F), String(S), InputOffset(I), OutputOffset(O), Exclude(E) {}
+                  uint32_t O, uint32_t H, bool E)
+      : Fragment(F), String(S), InputOffset(I), OutputOffset(O), Hash(H),
+        Exclude(E) {}
   void exclude() { Exclude = true; }
   uint64_t size() const { return String.size(); }
   bool hasOutputOffset() const {
@@ -52,23 +54,19 @@ public:
 
   ~MergeStringFragment() {}
 
-  /// merge String S into output section O, or globally in M if it is
-  /// a non-alloc string. Return the string that S was merged with or nullptr if
-  /// S is unique.
-  static MergeableString *mergeStrings(MergeableString *S,
-                                       OutputSectionEntry *O, Module &M);
-
   bool readStrings(LinkerConfig &Config);
 
   static bool classof(const Fragment *F) {
     return F->getKind() == Fragment::MergeString;
   }
 
-  size_t size() const override;
+  size_t size() const override { return 0; }
 
-  bool isZeroSizedFrag() const override { return Strings.empty(); }
+  bool isZeroSizedFrag() const override { return true; }
 
-  eld::Expected<void> emit(MemoryRegion &Region, Module &M) override;
+  eld::Expected<void> emit(MemoryRegion &Region, Module &M) override {
+    return {};
+  }
 
   std::vector<MergeableString *> &getStrings() { return Strings; }
 
@@ -78,13 +76,7 @@ public:
 
   void copyData(void *Dest, uint64_t Bytes, uint64_t Offset) const;
 
-  void setOffset(uint32_t Offset) override;
-
-private:
-  /// After this fragment has been given an output offset this function will be
-  /// called and set the output offset of every string owned by this fragment
-  /// TODO: we can do this in parallel
-  void assignOutputOffsets();
+  void setOffset(uint32_t Offset) override {}
 };
 
 } // namespace eld

@@ -9,6 +9,7 @@
 
 #include "eld/Fragment/MergeStringFragment.h"
 #include "eld/Object/SectionMap.h"
+#include "eld/Readers/OutputStringTable.h"
 #include "eld/Script/Assignment.h"
 #include "eld/Script/OutputSectDesc.h"
 #include "eld/Target/LDFileFormat.h"
@@ -175,20 +176,6 @@ public:
 
   bool insertBeforeRule(RuleContainer *I, RuleContainer *R);
 
-  // -------------------- String merging support -------------------------
-
-  MergeableString *getMergedString(const MergeableString *S) const {
-    auto Str = UniqueStrings.find(S->String);
-    if (Str == UniqueStrings.end())
-      return nullptr;
-    MergeableString *MergedString = Str->second;
-    if (MergedString == S)
-      return nullptr;
-    return MergedString;
-  }
-
-  void addString(MergeableString *S) { UniqueStrings.insert({S->String, S}); }
-
   uint64_t getTrampolineCount(const std::string &TrampolineName);
 
   uint64_t getTotalTrampolineCount() const;
@@ -196,6 +183,12 @@ public:
   // Update epilog in OutputSectionEntry to point epilog entries to
   // entries created in the linker
   eld::Expected<void> updateEpilog(Module &M);
+
+  bool hasOutputStringTable() const { return !!Strings; }
+
+  void setOutputStringTable(OutputStringTable *T) { Strings = T; }
+
+  OutputStringTable *getOutputStringTable() const { return Strings; }
 
 private:
   std::string Name;
@@ -211,10 +204,10 @@ private:
   std::vector<BranchIsland *> BranchIslands;
   std::unordered_map<ResolveInfo *, std::vector<BranchIsland *>>
       BranchIslandForSymbol;
-  llvm::StringMap<MergeableString *> UniqueStrings;
   uint64_t Hash = 0;
   llvm::StringMap<uint64_t> TrampolineNameToCountMap;
   uint64_t PAddr = 0;
+  OutputStringTable *Strings = nullptr;
 };
 
 } // namespace eld

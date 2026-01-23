@@ -34,6 +34,7 @@ public:
                                             "move chunks from rodata to text");
     ELDEXP_REPORT_AND_RETURN_ERROR_IF_ERROR(getLinker(), ExpMoveChunksRule);
     auto MoveChunksRule = std::move(ExpMoveChunksRule.value());
+    /// FIXME:
     for (auto &Rule : RodataRules) {
       for (auto &Chunk : Rule.getChunks()) {
         ELDEXP_REPORT_AND_RETURN_ERROR_IF_ERROR(

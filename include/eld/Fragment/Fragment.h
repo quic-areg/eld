@@ -121,7 +121,7 @@ public:
 
   virtual void addSymbol(ResolveInfo *R) {}
 
-  bool isMergeStr() const;
+  virtual bool isMergeStr() const;
 
   bool isNull() const { return Kind == Null; }
 

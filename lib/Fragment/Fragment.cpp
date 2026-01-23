@@ -39,6 +39,7 @@ Fragment::Fragment(Type PKind, ELFSection *CurSection, uint32_t Align)
 Fragment::~Fragment() {}
 
 uint32_t Fragment::getOffset(DiagnosticEngine *DiagEngine) const {
+  assert(!isMergeStr() && "MergeStringFragments do not have output offsets!");
   if (DiagEngine && !hasOffset()) {
     auto *I = getOwningSection()->getMatchedLinkerScriptRule();
     std::string RuleStr;
@@ -144,7 +145,7 @@ uint64_t Fragment::getAddr(DiagnosticEngine *DiagEngine) const {
   return getOutputELFSection()->addr() + getOffset(DiagEngine);
 }
 
-bool Fragment::isMergeStr() const { return getOwningSection()->isMergeKind(); }
+bool Fragment::isMergeStr() const { return getKind() == MergeString; }
 
 bool Fragment::originatesFromPlugin(const Module &Module) const {
   return getOwningSection()->getInputFile() ==

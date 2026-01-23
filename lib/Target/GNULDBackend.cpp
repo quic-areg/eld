@@ -2058,7 +2058,7 @@ void GNULDBackend::evaluateAssignments(OutputSectionEntry *out,
     InSection->setOffset(offset);
     while (Begin != End) {
       Fragment *F = *Begin;
-      if (F->isNull()) {
+      if (F->isNull() || F->isMergeStr()) {
         ++Begin;
         continue;
       }

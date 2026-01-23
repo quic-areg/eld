@@ -55,23 +55,18 @@ void Relocator::partialScanRelocation(Relocation &pReloc,
   }
 }
 
-std::pair<Fragment *, uint64_t>
-Relocator::findFragmentForMergeStr(const ELFSection *RelocationSection,
-                                   const Relocation *R,
-                                   MergeStringFragment *F) const {
-  uint32_t Addend = getAddend(R);
+static uint64_t getOutputStringOffset(const ELFSection *RelocationSection,
+                                      const Relocation *R,
+                                      MergeStringFragment *F,
+                                      const Relocator &RC) {
+  uint32_t Addend = RC.getAddend(R);
   MergeableString *String = F->findString(Addend);
   uint32_t OffsetInString = Addend - String->InputOffset;
-
-  if (!String)
-    return {nullptr, 0};
-
-  OutputSectionEntry *OutputSection = F->getOwningSection()->getOutputSection();
-  if (MergeableString *DeDuped = OutputSection->getMergedString(String)) {
-    String = DeDuped;
-  }
-
-  return {String->Fragment, String->InputOffset + OffsetInString};
+  uint32_t OutputOffset = F->getOwningSection()
+                              ->getOutputSection()
+                              ->getOutputStringTable()
+                              ->getOutputOffset({String->String, String->Hash});
+  return OutputOffset + OffsetInString;
 }
 
 bool Relocator::doMergeStrings(ELFSection *S) {
@@ -82,18 +77,23 @@ bool Relocator::doMergeStrings(ELFSection *S) {
     FragmentRef *OldTarget = R->targetFragRef()
                                  ? R->targetFragRef()
                                  : R->symInfo()->outSymbol()->fragRef();
-
     auto *MSF = llvm::cast<MergeStringFragment>(OldTarget->frag());
-    auto [Frag, Offset] = findFragmentForMergeStr(S, R, MSF);
-    if (!Frag)
-      return;
-    // We only have to mess with addends and make new FragmentRefs for strings
-    // that we moved (merged strings).
-    if (OldTarget->frag() == Frag && OldTarget->offset() == Offset)
-      return;
+    auto Offset = getOutputStringOffset(S, R, MSF, *this);
     adjustAddend(R);
     /// Replace the target to point to the string directly.
-    R->modifyRelocationFragmentRef(make<FragmentRef>(*Frag, Offset));
+    R->modifyRelocationFragmentRef(
+        make<FragmentRef>(*OldTarget->frag()
+                               ->getOwningSection()
+                               ->getOutputSection()
+                               ->getOutputStringTable(),
+                          Offset));
+
+    /// FIXME:
+    // llvm::outs() << "relocations for"
+    //              << OldTarget->frag()->getOwningSection()->name() << " "
+    //              << OldTarget->offset() << "-> " << Offset << "\n";
+
+
   };
 
   for (Relocation *R : S->getLink()->getRelocations())

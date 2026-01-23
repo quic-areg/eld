@@ -257,6 +257,7 @@ uint32_t plugin::MergeableString::getInputOffset() const {
 }
 
 uint32_t plugin::MergeableString::getOutputOffset() const {
+  /// FIXME: can we just request this from the OST?
   return String->OutputOffset;
 }
 

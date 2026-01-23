@@ -132,6 +132,31 @@ ELFSection *ObjectBuilder::mergeSection(GNULDBackend &PGnuldBackend,
     ToSection = Target;
   }
 
+  /// FIXME: clean this up
+  if (CurInputSection->isMergeKind() &&
+      !CurInputSection->getOutputSection()->hasOutputStringTable() &&
+      !ThisModule.getConfig().isLinkPartial()) {
+    // llvm::outs() << "created the fake section\n";
+    // llvm::outs().flush();
+
+    OutputSectionEntry *O = CurInputSection->getOutputSection();
+    auto *OwningSection = ThisModule.getScript().sectionMap().createELFSection(
+        ".intern.strings", LDFileFormat::Internal, CurInputSection->getType(),
+        CurInputSection->getFlags(), CurInputSection->getEntSize());
+    OwningSection->setOutputSection(O);
+    OwningSection->setMatchedLinkerScriptRule(
+        CurInputSection->getMatchedLinkerScriptRule());
+    auto *Ipt = ThisModule.createInternalInputFile(
+        make<Input>("string intern section",
+                    ThisModule.getConfig().getDiagEngine(), Input::Internal),
+        false);
+    OwningSection->setInputFile(Ipt);
+    auto *Table = make<OutputStringTable>(OwningSection);
+    CurInputSection->getMatchedLinkerScriptRule()->getSection()->addFragment(
+        Table);
+    O->setOutputStringTable(Table);
+  }
+
   mayChangeSectionTypeOrKind(ToSection, CurInputSection);
 
   if (CurInputSection->isGroupKind()) {
@@ -154,10 +179,8 @@ ELFSection *ObjectBuilder::mergeSection(GNULDBackend &PGnuldBackend,
 void ObjectBuilder::mergeStrings(MergeStringFragment *F,
                                  OutputSectionEntry *O) {
   for (MergeableString *S : F->getStrings()) {
-    MergeableString *MergedString =
-        MergeStringFragment::mergeStrings(S, O, module());
-    if (!MergedString)
-      continue;
+    assert(O->hasOutputStringTable());
+    O->getOutputStringTable()->intern(S);
   }
 }
 

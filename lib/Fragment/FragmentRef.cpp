@@ -137,22 +137,14 @@ FragmentRef::Offset FragmentRef::getOutputOffset(Module &M) const {
     return ThisOffset + Pieces[I].getOutputOffset() - Pieces[I].getOffset();
   }
   /// Correct the output offset for merged strings
-  if (ThisFragment->isMergeStr()) {
-    auto *MSF = llvm::cast<MergeStringFragment>(ThisFragment);
-    OutputSectionEntry *O = getOutputSection();
-    MergeableString *S = MSF->findString(ThisOffset);
-    assert(S);
-    /// The target string could be a suffix
-    uint32_t OffsetInString = ThisOffset - S->InputOffset;
-    if (const MergeableString *Merged = O->getMergedString(S)) {
-      assert(S->Exclude);
-      assert(!Merged->Exclude);
-      assert(Merged->hasOutputOffset());
-      return Merged->OutputOffset + OffsetInString;
-    }
-    assert(!S->Exclude);
-    assert(S->hasOutputOffset());
-    return S->OutputOffset + OffsetInString;
+  if (auto *F = llvm::dyn_cast<MergeStringFragment>(ThisFragment)) {
+    /// FIXME: why do these fragments need to exist at all?
+    auto *S = F->findString(ThisOffset);
+    llvm::CachedHashStringRef Key = {S->String, S->Hash};
+    return F->getOwningSection()
+        ->getOutputSection()
+        ->getOutputStringTable()
+        ->getOutputOffset(Key);
   }
   Offset Result = 0;
   if (nullptr != ThisFragment)

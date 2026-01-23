@@ -626,6 +626,8 @@ void TextLayoutPrinter::printPadding(ELFSection *Section, int64_t StartOffset,
 void TextLayoutPrinter::printFragInfo(Fragment *Frag, LayoutFragmentInfo *Info,
                                       ELFSection *Section, Module &M) const {
 
+  if (Frag->isMergeStr())
+    return;
   bool Onlylayout =
       ThisLayoutInfo->showOnlyLayout() || M.isLinkStateBeforeLayout();
   std::string Type =
