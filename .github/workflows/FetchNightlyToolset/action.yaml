@@ -10,8 +10,8 @@ runs:
         github-token: ${{ github.token }}
         script: |
           const workflowId = 'nightly-test.yml';
-          const owner = context.repo.owner;
-          const repo = context.repo.repo;
+          const owner = 'qualcomm';
+          const repo = 'eld';
           const status = 'success';
           const resp = await github.rest.actions.listWorkflowRuns({
               owner,
@@ -37,6 +37,7 @@ runs:
         name: install-nightly-toolchain.tar.xz
         github-token: ${{ github.token }}
         run-id: ${{ steps.latest.outputs.run_id }}
+        repository: qualcomm/eld
 
     - name: Extract toolset
       shell: bash
