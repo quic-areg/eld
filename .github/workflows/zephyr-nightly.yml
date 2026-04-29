@@ -6,7 +6,6 @@ on:
     - cron: '0 9 * * *'
   workflow_dispatch:
 
-
 permissions:
   contents: write
 jobs:
@@ -22,26 +21,22 @@ jobs:
         target:
           - board: qemu_riscv32
             arch: riscv32
-            extra_args: CONFIG_PICOLIBC_USE_TOOLCHAIN=y
           - board: qemu_riscv64
             arch: riscv64
-            extra_args: CONFIG_PICOLIBC_USE_TOOLCHAIN=y
           - board: qemu_cortex_m3
             arch: arm
-            # cpullvm ARM picolibc is missing a _nopic version, so its
-            # objects have GOT relocations that fail when .got is discarded.
-            extra_args: CONFIG_PICOLIBC_USE_MODULE=y
           - board: qemu_cortex_a53
             arch: aarch64
-            extra_args: CONFIG_PICOLIBC_USE_TOOLCHAIN=y
     env:
-      CPULLVM_VERSION: "22.1.0"
       CPULLVM_DIR: /opt/cpullvm
+      LLVM_TOOLCHAIN_PATH: /opt/cpullvm
+      ZEPHYR_SDK_INSTALL_DIR: /opt/toolchains/
       CCACHE_DIR: /root/.ccache
       CCACHE_BASEDIR: ${{ github.workspace }}
       CCACHE_NOHASHDIR: "1"
       CCACHE_MAXSIZE: "2G"
       CCACHE_COMPRESS: "1"
+      # FIXME: ccache will be practically useless if the compiler changes with each run.
       CCACHE_COMPILERCHECK: "content"
 
     steps:
@@ -59,9 +54,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: ccache-${{ matrix.target.arch }}-cpullvm${{ env.CPULLVM_VERSION }}-${{ github.run_id }}
+          key: ccache-${{ matrix.target.arch }}-cpullvm-nightly-${{ github.run_id }}
           restore-keys: |
-            ccache-${{ matrix.target.arch }}-cpullvm${{ env.CPULLVM_VERSION }}-
+            ccache-${{ matrix.target.arch }}-cpullvm-nightly-
 
       - name: ccache stats (before build)
         run: ccache -s -v || ccache -s
@@ -82,24 +77,64 @@ jobs:
 
       - name: Fetch nightly ELD
         uses: ./llvm-project/llvm/tools/eld/.github/workflows/FetchNightlyToolset
+        with:
+          # Always pull from the canonical repo, including when this workflow
+          # runs from a fork (forks don't have their own nightly-test.yml
+          # runs). In qualcomm/eld the default GITHUB_TOKEN can read its own
+          # actions; in a fork it can't, so we fall back to the PAT.
+          source-repo: qualcomm/eld
+          github-token: ${{ github.repository_owner == 'qualcomm' && github.token || secrets.CPULLVM_ARTIFACT_TOKEN }}
 
-      - name: Install cpullvm toolchain and splice nightly ELD
+      - name: Fetch nightly cpullvm toolchain and splice nightly ELD
+        # Picks the most recent qualcomm/cpullvm-toolchain artifact named
+        # cpullvm-packages-build.sh-Linux-x86.  Requires a PAT in secret CPULLVM_ARTIFACT_TOKEN with
+        # `actions:read` on qualcomm/cpullvm-toolchain; the default
+        # GITHUB_TOKEN cannot read artifacts across repositories.
+        env:
+          GH_TOKEN: ${{ secrets.CPULLVM_ARTIFACT_TOKEN }}
+        shell: bash
         run: |
-          # Download cpullvm release
-          wget -q --tries=3 --retry-on-http-error=429,500,502,503,504 --waitretry=5 https://github.com/qualcomm/cpullvm-toolchain/releases/download/cpullvm-${CPULLVM_VERSION}/cpullvm-${CPULLVM_VERSION}-Linux-x86_64.tar.xz
-          tar -xf cpullvm-${CPULLVM_VERSION}-Linux-x86_64.tar.xz
-          mv cpullvm-${CPULLVM_VERSION}-Linux-x86_64 ${CPULLVM_DIR}
-          rm cpullvm-${CPULLVM_VERSION}-Linux-x86_64.tar.xz
+          set -euo pipefail
+          python3 <<'PY'
+          import io, json, os, urllib.request, urllib.error, zipfile
+          BASE = "https://api.github.com/repos/qualcomm/cpullvm-toolchain/actions"
+          HDR = {"Authorization": f"Bearer {os.environ['GH_TOKEN']}",
+                 "Accept": "application/vnd.github+json"}
+          def api_get(url):
+              return urllib.request.urlopen(urllib.request.Request(url, headers=HDR)).read()
+          meta = json.loads(api_get(f"{BASE}/artifacts?name=cpullvm-packages-build.sh-Linux-x86&per_page=1"))
+          a = meta["artifacts"][0]
+          print(f"Using cpullvm nightly run {a['workflow_run']['id']} @ {a['workflow_run']['head_sha']}")
+          # The /zip endpoint 302s to a pre-signed Azure blob URL. Azure rejects
+          # requests that carry our GitHub Bearer header alongside its own SAS
+          # token, so suppress the redirect and fetch the blob URL with no
+          # headers.
+          class NoFollow(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, *_, **__): return None
+          opener = urllib.request.build_opener(NoFollow)
+          try:
+              opener.open(urllib.request.Request(f"{BASE}/artifacts/{a['id']}/zip", headers=HDR))
+              raise RuntimeError("expected a 302 redirect to the blob URL")
+          except urllib.error.HTTPError as e:
+              if e.code not in (301, 302, 303, 307, 308):
+                  raise
+              blob_url = e.headers["Location"]
+          with zipfile.ZipFile(io.BytesIO(urllib.request.urlopen(blob_url).read())) as z:
+              z.extractall(".")
+          PY
+          tar -xf build/cpullvm-*-Linux-x86_64.tar.xz
+          mv cpullvm-*-Linux-x86_64 "${CPULLVM_DIR}"
+          rm -rf build
 
           # Splice nightly ELD into cpullvm
-          cp inst/bin/ld.eld ${CPULLVM_DIR}/bin/ld.eld
-          cp inst/lib/libLW.so.4 ${CPULLVM_DIR}/lib/libLW.so.4
-          ln -sf libLW.so.4 ${CPULLVM_DIR}/lib/libLW.so
+          cp inst/bin/ld.eld "${CPULLVM_DIR}/bin/ld.eld"
+          cp inst/lib/libLW.so.4 "${CPULLVM_DIR}/lib/libLW.so.4"
+          ln -sf libLW.so.4 "${CPULLVM_DIR}/lib/libLW.so"
 
           echo "Nightly ELD version:"
-          ${CPULLVM_DIR}/bin/ld.eld --version
+          "${CPULLVM_DIR}/bin/ld.eld" --version
           echo "cpullvm clang version:"
-          ${CPULLVM_DIR}/bin/clang --version | head -1
+          "${CPULLVM_DIR}/bin/clang" --version | head -1
 
       - name: Clone Zephyr
         uses: actions/checkout@v6
@@ -137,13 +172,11 @@ jobs:
         run: |
           cd zephyr
           source zephyr-env.sh
-          export ZEPHYR_SDK_INSTALL_DIR=/opt/toolchains/
           export ZEPHYR_TOOLCHAIN_VARIANT=host/llvm
-          export LLVM_TOOLCHAIN_PATH=${CPULLVM_DIR}
           west build -p always -b ${{ matrix.target.board }} samples/hello_world -- \
             -DCONFIG_LLVM_USE_ELD=y \
             -DCONFIG_COMPILER_RT_RTLIB=y \
-            ${{ matrix.target.extra_args && format('-D{0}', matrix.target.extra_args) }}
+            -DCONFIG_PICOLIBC_USE_TOOLCHAIN=y
 
       - name: Run hello_world on QEMU
         shell: bash
@@ -164,8 +197,6 @@ jobs:
         run: |
           cd zephyr
           source zephyr-env.sh
-          export ZEPHYR_SDK_INSTALL_DIR=/opt/toolchains/
-          export LLVM_TOOLCHAIN_PATH=${CPULLVM_DIR}
           west twister -W -p ${{ matrix.target.board }} \
             --inline-logs \
             --timestamps \
@@ -174,7 +205,7 @@ jobs:
             -x=ZEPHYR_TOOLCHAIN_VARIANT=host/llvm \
             -x=CONFIG_LLVM_USE_ELD=y \
             -x=CONFIG_COMPILER_RT_RTLIB=y \
-            ${{ matrix.target.extra_args && format('-x={0}', matrix.target.extra_args) }}
+            -x=CONFIG_PICOLIBC_USE_TOOLCHAIN=y
 
       - name: Upload twister results
         if: always()
