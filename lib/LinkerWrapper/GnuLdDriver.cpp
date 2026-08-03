@@ -207,6 +207,36 @@ void GnuLdDriver::printVersionInfo() const {
   outs() << "\n";
 }
 
+template <class T>
+std::optional<int>
+GnuLdDriver::handleInfoOptions(llvm::opt::InputArgList &Args,
+                              llvm::ArrayRef<const char *> ArgStrs,
+                              llvm::StringRef LinkerName) {
+  if (Args.hasArg(T::help)) {
+    Table->printHelp(outs(), ArgStrs[0], LinkerName.data(), false,
+                     /*ShowAllAliases=*/true);
+    return LINK_SUCCESS;
+  }
+  if (Args.hasArg(T::help_hidden)) {
+    Table->printHelp(outs(), ArgStrs[0], LinkerName.data(), true,
+                     /*ShowAllAliases=*/true);
+    return LINK_SUCCESS;
+  }
+  if (Args.hasArg(T::version)) {
+    printVersionInfo();
+    return LINK_SUCCESS;
+  }
+  if (Args.hasArg(T::about)) {
+    printAboutInfo();
+    return LINK_SUCCESS;
+  }
+  if (Args.hasArg(T::repository_version)) {
+    printRepositoryVersion();
+    return LINK_SUCCESS;
+  }
+  return std::nullopt;
+}
+
 // Some command line options or some combinations of them are not allowed.
 // This function checks for such errors.
 template <class T>
@@ -2133,30 +2163,9 @@ std::optional<int> GnuLdDriver::parseOptions(ArrayRef<const char *> Args,
         << ArgList.getArgString(missingIndex) << missingCount;
     return LINK_FAIL;
   }
-  if (ArgList.hasArg(OPT_GnuLdOptTable::help)) {
-    Table->printHelp(outs(), Args[0], "RISCV Linker", false,
-                     /*ShowAllAliases=*/true);
-    return LINK_SUCCESS;
-  }
-  if (ArgList.hasArg(OPT_GnuLdOptTable::help_hidden)) {
-    Table->printHelp(outs(), Args[0], "RISCV Linker", true,
-                     /*ShowAllAliases=*/true);
-    return LINK_SUCCESS;
-  }
-  if (ArgList.hasArg(OPT_GnuLdOptTable::version)) {
-    printVersionInfo();
-    return LINK_SUCCESS;
-  }
-  // --about
-  if (ArgList.hasArg(OPT_GnuLdOptTable::about)) {
-    printAboutInfo();
-    return LINK_SUCCESS;
-  }
-  // -repository-version
-  if (ArgList.hasArg(OPT_GnuLdOptTable::repository_version)) {
-    printRepositoryVersion();
-    return LINK_SUCCESS;
-  }
+  if (auto R = handleInfoOptions<OPT_GnuLdOptTable>(ArgList, Args,
+                                                    "RISCV Linker"))
+    return R;
 
   Config.options().setUnknownOptions(
       ArgList.getAllArgValues(OPT_GnuLdOptTable::UNKNOWN));
@@ -2233,6 +2242,9 @@ int GnuLdDriver::link(llvm::ArrayRef<const char *> Args,
 // Hexagon -- force instantiate
 template bool GnuLdDriver::checkOptions<OPT_HexagonLinkOptTable>(
     llvm::opt::InputArgList &args) const;
+template std::optional<int>
+GnuLdDriver::handleInfoOptions<OPT_HexagonLinkOptTable>(
+    llvm::opt::InputArgList &, llvm::ArrayRef<const char *>, llvm::StringRef);
 template bool GnuLdDriver::processOptions<OPT_HexagonLinkOptTable>(
     llvm::opt::InputArgList &args);
 template bool GnuLdDriver::processLLVMOptions<OPT_HexagonLinkOptTable>(
@@ -2256,6 +2268,8 @@ template bool GnuLdDriver::processLTOOptions<OPT_HexagonLinkOptTable>(
 // ARM -- force instantiate
 template bool GnuLdDriver::checkOptions<OPT_ARMLinkOptTable>(
     llvm::opt::InputArgList &args) const;
+template std::optional<int> GnuLdDriver::handleInfoOptions<OPT_ARMLinkOptTable>(
+    llvm::opt::InputArgList &, llvm::ArrayRef<const char *>, llvm::StringRef);
 template bool
 GnuLdDriver::processOptions<OPT_ARMLinkOptTable>(llvm::opt::InputArgList &args);
 template bool GnuLdDriver::processLLVMOptions<OPT_ARMLinkOptTable>(
@@ -2280,6 +2294,9 @@ GnuLdDriver::processLTOOptions<OPT_ARMLinkOptTable>(llvm::lto::Config &,
 // RISCV -- force instantiate
 template bool GnuLdDriver::checkOptions<OPT_RISCVLinkOptTable>(
     llvm::opt::InputArgList &args) const;
+template std::optional<int>
+GnuLdDriver::handleInfoOptions<OPT_RISCVLinkOptTable>(
+    llvm::opt::InputArgList &, llvm::ArrayRef<const char *>, llvm::StringRef);
 template bool GnuLdDriver::processOptions<OPT_RISCVLinkOptTable>(
     llvm::opt::InputArgList &args);
 template bool GnuLdDriver::processLLVMOptions<OPT_RISCVLinkOptTable>(
@@ -2303,6 +2320,9 @@ template bool GnuLdDriver::processLTOOptions<OPT_RISCVLinkOptTable>(
 // Template -- force instantiate
 template bool GnuLdDriver::checkOptions<OPT_TemplateLinkOptTable>(
     llvm::opt::InputArgList &args) const;
+template std::optional<int>
+GnuLdDriver::handleInfoOptions<OPT_TemplateLinkOptTable>(
+    llvm::opt::InputArgList &, llvm::ArrayRef<const char *>, llvm::StringRef);
 template bool GnuLdDriver::processOptions<OPT_TemplateLinkOptTable>(
     llvm::opt::InputArgList &args);
 template bool GnuLdDriver::processLLVMOptions<OPT_TemplateLinkOptTable>(
@@ -2326,6 +2346,9 @@ template bool GnuLdDriver::processLTOOptions<OPT_TemplateLinkOptTable>(
 // x86_64 -- force instantiate
 template bool GnuLdDriver::checkOptions<OPT_x86_64LinkOptTable>(
     llvm::opt::InputArgList &args) const;
+template std::optional<int>
+GnuLdDriver::handleInfoOptions<OPT_x86_64LinkOptTable>(
+    llvm::opt::InputArgList &, llvm::ArrayRef<const char *>, llvm::StringRef);
 template bool GnuLdDriver::processOptions<OPT_x86_64LinkOptTable>(
     llvm::opt::InputArgList &args);
 template bool GnuLdDriver::processLLVMOptions<OPT_x86_64LinkOptTable>(

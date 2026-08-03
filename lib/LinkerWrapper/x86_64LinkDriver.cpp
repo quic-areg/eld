@@ -69,30 +69,9 @@ x86_64LinkDriver::parseOptions(ArrayRef<const char *> Args,
         << ArgList.getArgString(missingIndex) << missingCount;
     return LINK_FAIL;
   }
-  if (ArgList.hasArg(OPT_x86_64LinkOptTable::help)) {
-    Table->printHelp(outs(), Args[0], "X86_64 Linker", false,
-                     /*ShowAllAliases=*/true);
-    return LINK_SUCCESS;
-  }
-  if (ArgList.hasArg(OPT_x86_64LinkOptTable::help_hidden)) {
-    Table->printHelp(outs(), Args[0], "X86_64 Linker", true,
-                     /*ShowAllAliases=*/true);
-    return LINK_SUCCESS;
-  }
-  if (ArgList.hasArg(OPT_x86_64LinkOptTable::version)) {
-    printVersionInfo();
-    return LINK_SUCCESS;
-  }
-  // --about
-  if (ArgList.hasArg(OPT_x86_64LinkOptTable::about)) {
-    printAboutInfo();
-    return LINK_SUCCESS;
-  }
-  // -repository-version
-  if (ArgList.hasArg(OPT_x86_64LinkOptTable::repository_version)) {
-    printRepositoryVersion();
-    return LINK_SUCCESS;
-  }
+  if (auto R = handleInfoOptions<OPT_x86_64LinkOptTable>(ArgList, Args,
+                                                         "X86_64 Linker"))
+    return R;
 
   Config.options().setUnknownOptions(
       ArgList.getAllArgValues(OPT_x86_64LinkOptTable::UNKNOWN));

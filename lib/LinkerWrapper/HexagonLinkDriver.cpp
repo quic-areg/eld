@@ -79,30 +79,9 @@ HexagonLinkDriver::parseOptions(ArrayRef<const char *> Args,
         << ArgList.getArgString(missingIndex) << missingCount;
     return LINK_FAIL;
   }
-  if (ArgList.hasArg(OPT_HexagonLinkOptTable::help)) {
-    Table->printHelp(outs(), Args[0], "Hexagon Linker", false,
-                     /*ShowAllAliases=*/true);
-    return LINK_SUCCESS;
-  }
-  if (ArgList.hasArg(OPT_HexagonLinkOptTable::help_hidden)) {
-    Table->printHelp(outs(), Args[0], "Hexagon Linker", true,
-                     /*ShowAllAliases=*/true);
-    return LINK_SUCCESS;
-  }
-  if (ArgList.hasArg(OPT_HexagonLinkOptTable::version)) {
-    printVersionInfo();
-    return LINK_SUCCESS;
-  }
-  // --about
-  if (ArgList.hasArg(OPT_HexagonLinkOptTable::about)) {
-    printAboutInfo();
-    return LINK_SUCCESS;
-  }
-  // -repository-version
-  if (ArgList.hasArg(OPT_HexagonLinkOptTable::repository_version)) {
-    printRepositoryVersion();
-    return LINK_SUCCESS;
-  }
+  if (auto R = handleInfoOptions<OPT_HexagonLinkOptTable>(ArgList, Args,
+                                                          "Hexagon Linker"))
+    return R;
 
   // --gpsize
   Config.options().setGPSize(

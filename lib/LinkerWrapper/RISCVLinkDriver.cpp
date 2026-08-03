@@ -89,30 +89,9 @@ RISCVLinkDriver::parseOptions(ArrayRef<const char *> Args,
         << ArgList.getArgString(missingIndex) << missingCount;
     return LINK_FAIL;
   }
-  if (ArgList.hasArg(OPT_RISCVLinkOptTable::help)) {
-    Table->printHelp(outs(), Args[0], "RISCV Linker", false,
-                     /*ShowAllAliases=*/true);
-    return LINK_SUCCESS;
-  }
-  if (ArgList.hasArg(OPT_RISCVLinkOptTable::help_hidden)) {
-    Table->printHelp(outs(), Args[0], "RISCV Linker", true,
-                     /*ShowAllAliases=*/true);
-    return LINK_SUCCESS;
-  }
-  if (ArgList.hasArg(OPT_RISCVLinkOptTable::version)) {
-    printVersionInfo();
-    return LINK_SUCCESS;
-  }
-  // --about
-  if (ArgList.hasArg(OPT_RISCVLinkOptTable::about)) {
-    printAboutInfo();
-    return LINK_SUCCESS;
-  }
-  // -repository-version
-  if (ArgList.hasArg(OPT_RISCVLinkOptTable::repository_version)) {
-    printRepositoryVersion();
-    return LINK_SUCCESS;
-  }
+  if (auto R = handleInfoOptions<OPT_RISCVLinkOptTable>(ArgList, Args,
+                                                        "RISCV Linker"))
+    return R;
 
   // --[no-]relax
   Config.options().setRISCVRelax(

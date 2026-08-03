@@ -96,30 +96,9 @@ ARMLinkDriver::parseOptions(ArrayRef<const char *> Args,
         << ArgList.getArgString(missingIndex) << missingCount;
     return LINK_FAIL;
   }
-  if (ArgList.hasArg(OPT_ARMLinkOptTable::help)) {
-    Table->printHelp(outs(), Args[0], "ARM Linker", false,
-                     /*ShowAllAliases=*/true);
-    return LINK_SUCCESS;
-  }
-  if (ArgList.hasArg(OPT_ARMLinkOptTable::help_hidden)) {
-    Table->printHelp(outs(), Args[0], "ARM Linker", true,
-                     /*ShowAllAliases=*/true);
-    return LINK_SUCCESS;
-  }
-  if (ArgList.hasArg(OPT_ARMLinkOptTable::version)) {
-    printVersionInfo();
-    return LINK_SUCCESS;
-  }
-  // --about
-  if (ArgList.hasArg(OPT_ARMLinkOptTable::about)) {
-    printAboutInfo();
-    return LINK_SUCCESS;
-  }
-  // -repository-version
-  if (ArgList.hasArg(OPT_ARMLinkOptTable::repository_version)) {
-    printRepositoryVersion();
-    return LINK_SUCCESS;
-  }
+  if (auto R = handleInfoOptions<OPT_ARMLinkOptTable>(ArgList, Args,
+                                                      "ARM Linker"))
+    return R;
   // --disable-bss-mixing
   if (ArgList.hasArg(OPT_ARMLinkOptTable::enable_bss_mixing))
     Config.options().setAllowBSSMixing(true);

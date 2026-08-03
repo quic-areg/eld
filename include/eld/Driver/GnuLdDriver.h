@@ -82,6 +82,11 @@ public:
                                  std::vector<std::string> &LLVMOptions);
 
 protected:
+  template <class T>
+  std::optional<int> handleInfoOptions(llvm::opt::InputArgList &Args,
+                                       llvm::ArrayRef<const char *> ArgStrs,
+                                       llvm::StringRef LinkerName);
+
   // Check if the options are invalid.
   template <class T> bool checkOptions(llvm::opt::InputArgList &Args) const;
 

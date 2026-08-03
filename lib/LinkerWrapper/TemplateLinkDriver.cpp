@@ -89,30 +89,9 @@ TemplateLinkDriver::parseOptions(ArrayRef<const char *> Args,
         << ArgList.getArgString(missingIndex) << missingCount;
     return LINK_FAIL;
   }
-  if (ArgList.hasArg(OPT_TemplateLinkOptTable::help)) {
-    Table->printHelp(outs(), Args[0], "Template Linker", false,
-                     /*ShowAllAliases=*/true);
-    return LINK_SUCCESS;
-  }
-  if (ArgList.hasArg(OPT_TemplateLinkOptTable::help_hidden)) {
-    Table->printHelp(outs(), Args[0], "Template Linker", true,
-                     /*ShowAllAliases=*/true);
-    return LINK_SUCCESS;
-  }
-  if (ArgList.hasArg(OPT_TemplateLinkOptTable::version)) {
-    printVersionInfo();
-    return LINK_SUCCESS;
-  }
-  // --about
-  if (ArgList.hasArg(OPT_TemplateLinkOptTable::about)) {
-    printAboutInfo();
-    return LINK_SUCCESS;
-  }
-  // -repository-version
-  if (ArgList.hasArg(OPT_TemplateLinkOptTable::repository_version)) {
-    printRepositoryVersion();
-    return LINK_SUCCESS;
-  }
+  if (auto R = handleInfoOptions<OPT_TemplateLinkOptTable>(ArgList, Args,
+                                                           "Template Linker"))
+    return R;
 
   Config.options().setUnknownOptions(
       ArgList.getAllArgValues(OPT_TemplateLinkOptTable::UNKNOWN));
